@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/container.dart';
 import 'package:flutter/src/widgets/framework.dart';
+import 'package:quiz_app_fe/model/api_adapter.dart';
 import 'package:quiz_app_fe/model/model_quiz.dart';
 import 'package:quiz_app_fe/screen/screen_quiz.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,23 +15,43 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<Quiz> quizzes = [
-    Quiz.fromMap({
-      'title': 'test',
-      'candidates': ['a', 'b', 'c', 'd'],
-      'answer': 0
-    }),
-    Quiz.fromMap({
-      'title': 'test',
-      'candidates': ['a', 'b', 'c', 'd'],
-      'answer': 0
-    }),
-    Quiz.fromMap({
-      'title': 'test',
-      'candidates': ['a', 'b', 'c', 'd'],
-      'answer': 0
-    }),
-  ];
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  List<Quiz> quizzes = [];
+  bool isLoading = false;
+
+  _fetchQuizzes() async {
+    setState(() {
+      isLoading = true;
+    });
+    String uri = 'http://127.0.0.1:8000/quiz/3/';
+    final response = await http.get(Uri.parse(uri));
+    if (response.statusCode == 200) {
+      setState(() {
+        quizzes = parseQuizzes(utf8.decode(response.bodyBytes));
+        isLoading = false;
+      });
+    } else {
+      throw Exception('failed to laod data');
+    }
+  }
+
+  // List<Quiz> quizzes = [
+  //   Quiz.fromMap({
+  //     'title': 'test',
+  //     'candidates': ['a', 'b', 'c', 'd'],
+  //     'answer': 0
+  //   }),
+  //   Quiz.fromMap({
+  //     'title': 'test',
+  //     'candidates': ['a', 'b', 'c', 'd'],
+  //     'answer': 0
+  //   }),
+  //   Quiz.fromMap({
+  //     'title': 'test',
+  //     'candidates': ['a', 'b', 'c', 'd'],
+  //     'answer': 0
+  //   }),
+  // ];
   @override
   Widget build(BuildContext context) {
     Size screenSize = MediaQuery.of(context).size;
@@ -39,6 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onWillPop: () async => false,
       child: SafeArea(
           child: Scaffold(
+        key: _scaffoldKey,
         appBar: AppBar(
           title: Text('My Quiz App'),
           backgroundColor: Colors.deepPurple,
@@ -85,12 +109,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             style: TextStyle(color: Colors.white),
                           ),
                           onPressed: () {
-                            Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => QuizScreen(
-                                          quizzes: quizzes,
-                                        )));
+                            _fetchQuizzes().whenComplete(() {
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => QuizScreen(
+                                            quizzes: quizzes,
+                                          )));
+                            });
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.deepPurple,
